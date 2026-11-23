@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BurnCraft — laser software for everyone</title>
+<meta name="description" content="BurnCraft: free, open-source laser design and control software, written in Rust. Opens LightBurn projects. Linux, Windows, macOS, FreeBSD and your browser.">
+<link rel="icon" href="img/icon.png">
+<style>
+:root {
+  --bg: #0d0b0e;
+  --bg2: #151217;
+  --card: #1b171e;
+  --line: #2d2631;
+  --text: #f1ece9;
+  --muted: #a99fa6;
+  --crimson: #d0164a;
+  --ember: #ff6a2b;
+  --gold: #ffb347;
+  --wood1: #c9955e;
+  --wood2: #a8743f;
+  --radius: 18px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+.wrap { width: min(1180px, 100% - 32px); margin: 0 auto; }
+
+/* ---- top bar ---- */
+header.top {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(13, 11, 14, .72);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.top .wrap { display: flex; align-items: center; gap: 18px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; text-decoration: none; letter-spacing: -.01em; }
+.brand img { width: 34px; height: 34px; border-radius: 9px; }
+.top nav { display: flex; gap: 6px; margin-left: 14px; }
+.top nav a { text-decoration: none; color: var(--muted); padding: 6px 10px; border-radius: 8px; font-size: 15px; }
+.top nav a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+.top .actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 650; font-size: 15px;
+  padding: 9px 16px; border-radius: 11px; border: 1px solid var(--line); background: var(--card); white-space: nowrap;
+  transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+}
+.btn:hover { transform: translateY(-1px); background: #241f28; }
+.btn.hot {
+  border: 0; color: #fff;
+  background: linear-gradient(135deg, var(--crimson), var(--ember));
+  box-shadow: 0 6px 24px -6px rgba(255, 90, 50, .55);
+}
+.btn.hot:hover { box-shadow: 0 10px 32px -6px rgba(255, 90, 50, .75); }
+.btn svg { width: 18px; height: 18px; }
+@media (max-width: 860px) { .top nav { display: none; } }
+@media (max-width: 560px) { .top .actions .btn.ghost-sm { display: none; } .btn { padding: 8px 12px; } }
+
+/* ---- hero ---- */
+.hero { position: relative; padding: 72px 0 56px; overflow: hidden; }
+.hero::before {
+  content: ""; position: absolute; inset: -20% -10% auto -10%; height: 120%;
+  background:
+    radial-gradient(600px 380px at 78% 38%, rgba(255,106,43,.20), transparent 70%),
+    radial-gradient(520px 420px at 10% 10%, rgba(208,22,74,.18), transparent 70%);
+  pointer-events: none;
+}
+.hero .wrap { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; }
+@media (max-width: 900px) { .hero .wrap { grid-template-columns: 1fr; } }
+.eyebrow { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; color: var(--gold); background: rgba(255,179,71,.08); border: 1px solid rgba(255,179,71,.22); padding: 5px 12px; border-radius: 99px; }
+h1 { font-size: clamp(40px, 6.2vw, 74px); line-height: 1.02; letter-spacing: -.035em; margin: 18px 0 18px; font-weight: 850; }
+h1 .burn {
+  background: linear-gradient(100deg, var(--gold), var(--ember) 40%, var(--crimson) 80%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.lead { font-size: 20px; color: #d9cfd4; max-width: 34em; margin: 0 0 28px; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.cta .btn { font-size: 16px; padding: 13px 20px; border-radius: 13px; }
+.platforms { margin-top: 26px; color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.platforms span::before { content: "●"; color: var(--ember); margin-right: 6px; font-size: 9px; vertical-align: 2px; }
+
+/* the burning board */
+.board {
+  position: relative; aspect-ratio: 1 / 1; max-width: 520px; margin-left: auto; width: 100%;
+  border-radius: 26px; overflow: hidden;
+  background:
+    repeating-linear-gradient(92deg, rgba(0,0,0,.05) 0 3px, transparent 3px 11px),
+    repeating-linear-gradient(88deg, rgba(255,255,255,.05) 0 2px, transparent 2px 17px),
+    radial-gradient(120% 90% at 30% 20%, #dcae74, var(--wood1) 45%, var(--wood2));
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.8), inset 0 0 0 1px rgba(255,255,255,.12), inset 0 -40px 80px -40px rgba(0,0,0,.35);
+}
+@media (max-width: 900px) { .board { margin: 8px auto 0; max-width: 420px; } }
+.board svg { position: absolute; inset: 9%; width: 82%; height: 82%; }
+.board .grain { position: absolute; inset: 0; opacity: .35; mix-blend-mode: multiply;
+  background: repeating-radial-gradient(ellipse 140% 30% at 50% 130%, transparent 0 14px, rgba(90,50,20,.14) 15px 16px); }
+#scorch { fill: #2a1208; opacity: 0; }
+#trace { fill: none; stroke: #3a170a; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+#laser { fill: #fff3d6; filter: url(#glow); }
+.smoke { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.22); filter: blur(6px); pointer-events: none; }
+.boardlabel { position: absolute; left: 16px; bottom: 14px; font: 600 12px/1 ui-monospace, Menlo, monospace; color: rgba(40,20,8,.7); letter-spacing: .04em; }
+
+/* ---- strip ---- */
+.strip { border-block: 1px solid var(--line); background: var(--bg2); }
+.strip .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 18px; padding: 22px 0; }
+.stat { display: flex; flex-direction: column; }
+.stat b { font-size: 24px; letter-spacing: -.02em; }
+.stat span { color: var(--muted); font-size: 14px; }
+
+/* ---- sections ---- */
+section.feature { padding: 96px 0; }
+section.feature .wrap { display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: center; }
+section.feature.flip .wrap { grid-template-columns: 1.15fr 1fr; }
+section.feature.flip .text { order: 2; }
+@media (max-width: 900px) {
+  section.feature .wrap, section.feature.flip .wrap { grid-template-columns: 1fr; gap: 28px; }
+  section.feature.flip .text { order: 0; }
+  section.feature { padding: 64px 0; }
+}
+.kicker { color: var(--ember); font-weight: 700; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+h2 { font-size: clamp(30px, 3.8vw, 46px); line-height: 1.08; letter-spacing: -.025em; margin: 10px 0 16px; }
+.text p { color: #d3c9ce; margin: 0 0 18px; }
+ul.ticks { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+ul.ticks li { position: relative; padding-left: 28px; color: #e7dfe2; }
+ul.ticks li::before {
+  content: ""; position: absolute; left: 0; top: .45em; width: 14px; height: 14px; border-radius: 4px;
+  background: linear-gradient(135deg, var(--crimson), var(--ember)); box-shadow: 0 0 12px rgba(255,106,43,.5);
+}
+
+/* framed screenshots with a laser sweep when they come into view */
+.shot {
+  position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line);
+  box-shadow: 0 30px 70px -30px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.02);
+  background: #111;
+}
+.shot img { width: 100%; }
+.shot::after {
+  content: ""; position: absolute; top: -10%; bottom: -10%; width: 3px; left: -5%;
+  background: linear-gradient(transparent, #fff6, var(--gold), #fff6, transparent);
+  box-shadow: 0 0 24px 6px rgba(255,140,60,.55);
+  opacity: 0;
+}
+.shot.seen::after { animation: sweep 1.6s cubic-bezier(.6,.1,.3,1) .2s 1 both; }
+@keyframes sweep { 0% { left: -5%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { left: 105%; opacity: 0; } }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.duo .shot:nth-child(2) { transform: translateY(32px); }
+.trio { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: center; }
+.trio .stack { display: grid; gap: 16px; }
+
+/* reveal on scroll */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
+.reveal.seen { opacity: 1; transform: none; }
+
+/* chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.chip { font: 600 13px/1 ui-monospace, Menlo, monospace; padding: 8px 11px; border-radius: 9px; background: #211c24; border: 1px solid var(--line); color: #e9dfe4; }
+.chip.hot { border-color: rgba(255,106,43,.4); color: var(--gold); }
+
+/* colony */
+.colony { position: relative; padding: 110px 0; background:
+  radial-gradient(700px 380px at 50% 0%, rgba(208,22,74,.16), transparent 70%), var(--bg2);
+  border-block: 1px solid var(--line); }
+.colony .head { text-align: center; max-width: 760px; margin: 0 auto 48px; }
+.colony .head p { color: #d3c9ce; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; perspective: 1200px; }
+@media (max-width: 900px) { .tiles { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; } }
+.tile {
+  border-radius: 20px; padding: 16px; background: linear-gradient(160deg, #2a2230, #18141b);
+  border: 1px solid var(--line); transform-style: preserve-3d; transition: transform .25s ease, box-shadow .25s ease;
+  box-shadow: 0 24px 50px -28px rgba(0,0,0,.9);
+}
+.face, .wood { border-radius: 12px; overflow: hidden; background:
+  repeating-linear-gradient(91deg, rgba(0,0,0,.045) 0 3px, transparent 3px 10px),
+  repeating-linear-gradient(89deg, rgba(255,255,255,.05) 0 2px, transparent 2px 15px),
+  radial-gradient(130% 100% at 30% 20%, #e0b47c, #c9955e 50%, #a8743f); }
+.tile .face { aspect-ratio: 16 / 11; display: grid; place-items: center; padding: 12px; }
+.tile .face img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 .4px rgba(40,15,5,.6)); }
+.wood { padding: 18px; box-shadow: 0 30px 70px -30px rgba(0,0,0,.9); }
+.narrow { max-width: 380px; margin: 0 auto; }
+.tile h3 { margin: 14px 4px 4px; font-size: 18px; }
+.tile p { margin: 0 4px 6px; color: var(--muted); font-size: 15px; }
+
+/* download */
+.download { padding: 100px 0 80px; }
+.download .head { text-align: center; margin-bottom: 40px; }
+.osgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.os {
+  display: flex; flex-direction: column; gap: 6px; text-decoration: none; padding: 20px; border-radius: 16px;
+  background: var(--card); border: 1px solid var(--line); transition: transform .2s ease, border-color .2s ease;
+}
+.os:hover { transform: translateY(-3px); border-color: rgba(255,106,43,.5); }
+.os b { font-size: 18px; }
+.os span { color: var(--muted); font-size: 14px; }
+.os.web { background: linear-gradient(150deg, rgba(208,22,74,.25), rgba(255,106,43,.15)); border-color: rgba(255,106,43,.35); }
+
+.honest { margin: 56px auto 0; max-width: 860px; padding: 22px 26px; border-radius: 16px; background: rgba(255,179,71,.06); border: 1px solid rgba(255,179,71,.25); color: #eadfc9; font-size: 16px; }
+.honest b { color: var(--gold); }
+
+footer { border-top: 1px solid var(--line); padding: 36px 0 60px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; }
+footer a { color: #d6ccd1; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .shot.seen::after { animation: none; }
+  .tile { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="img/icon.png" alt="">BurnCraft</a>
+    <nav>
+      <a href="#design">Design</a>
+      <a href="#pictures">Pictures</a>
+      <a href="#burn">Burn</a>
+      <a href="#calibrate">Calibrate</a>
+      <a href="#colony">Colony</a>
+      <a href="#download">Download</a>
+    </nav>
+    <div class="actions">
+      <a class="btn ghost-sm" href="https://github.com/amruthwo/BurnCraft" aria-label="BurnCraft on GitHub">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub</a>
+      <a class="btn ghost-sm" href="https://github.com/amruthwo/BurnCraft/releases/latest">Releases</a>
+      <a class="btn hot" href="https://amruthwo.github.io/BurnCraft/">Try in browser</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">🐜 Free &amp; open source · written in Rust</span>
+      <h1>Laser software<br>for <span class="burn">everyone.</span></h1>
+      <p class="lead">Design, trace and burn with one friendly app. BurnCraft sketches like CAD, edits pictures like a photo app,
+        drives your laser safely, and opens your LightBurn projects.</p>
+      <div class="cta">
+        <a class="btn hot" href="https://github.com/amruthwo/BurnCraft/releases/latest">Download BurnCraft</a>
+        <a class="btn" href="https://amruthwo.github.io/BurnCraft/">Try it in your browser →</a>
+      </div>
+      <div class="platforms"><span>Linux</span><span>Windows</span><span>macOS</span><span>FreeBSD</span><span>Your browser</span></div>
+    </div>
+    <div class="board" aria-label="A laser burning the BurnCraft ant into wood">
+      <div class="grain"></div>
+      <svg viewBox="0 0 161.368 214.021" role="img" aria-hidden="true">
+        <defs>
+          <filter id="glow" x="-200%" y="-200%" width="500%" height="500%">
+            <feGaussianBlur stdDeviation="2.4" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="halo"><stop offset="0" stop-color="#ffd38a" stop-opacity=".9"/><stop offset="1" stop-color="#ff6a2b" stop-opacity="0"/></radialGradient>
+        </defs>
+        <g transform="{{ANT_T}}">
+          <path id="scorch" d="{{ANT_D}}"/>
+          <path id="trace" d="{{ANT_D}}"/>
+        </g>
+        <circle id="halo" r="9" fill="url(#halo)" opacity="0"/>
+        <circle id="laser" r="1.6" opacity="0"/>
+      </svg>
+      <div class="boardlabel">BURN COLONY · ANT #1</div>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="wrap">
+    <div class="stat"><b>7 platforms</b><span>desktop, ARM and the web</span></div>
+    <div class="stat"><b>.lbrn2 · .burn</b><span>opens LightBurn projects</span></div>
+    <div class="stat"><b>4 laser types</b><span>GRBL · K40 · galvo · Ruida</span></div>
+    <div class="stat"><b>0 tracking</b><span>no account, no telemetry</span></div>
+    <div class="stat"><b>GPL-3.0</b><span>free forever</span></div>
+  </div>
+</div>
+
+<section class="feature" id="design">
+  <div class="wrap">
+    <div class="text reveal">
+      <div class="kicker">Design</div>
+      <h2>Sketch like CAD. Lay out like a pro.</h2>
+      <p>A tabbed ribbon with big, labelled tools that shrinks gracefully on small screens. Draw with lines, curves, arcs
+        and shapes, then tie them together with relations and live dimensions.</p>
+      <ul class="ticks">
+        <li>Weld, union, subtract, offset, fillet and trim</li>
+        <li>Editable grid, circular and path arrays, and nesting that packs parts onto offcuts</li>
+        <li>Text with your installed fonts, QR codes and barcodes, variable text and serial numbers</li>
+        <li>Generators for finger-joint boxes, living hinges, gears and jigsaw puzzles</li>
+      </ul>
+    </div>
+    <div class="shot reveal"><img src="img/main.png" alt="BurnCraft's main window with a design on the laser bed" loading="lazy"></div>
+  </div>
+</section>
+
+<section class="feature flip">
+  <div class="wrap">
+    <div class="text reveal">
+      <div class="kicker">Shape &amp; text</div>
+      <h2>Bend it, wrap it, stencil it.</h2>
+      <p>Put text around a circle or along any curve, and it stays editable. Warp shapes with live handles. Make stencils that
+        don't lose the middles of their letters.</p>
+      <ul class="ticks">
+        <li>Arch, arc, bulge, wave, rise, fisheye, perspective and mesh warps</li>
+        <li>Skew, and rotate around any point you choose</li>
+        <li>Bolden or thin, and automatic stencil bridges</li>
+      </ul>
+    </div>
+    <div class="duo">
+      <div class="shot reveal"><img src="img/textcircle-detail.png" alt="Text set around a circle" loading="lazy"></div>
+      <div class="shot reveal"><img src="img/warp-detail.png" alt="An arch warp being previewed" loading="lazy"></div>
+    </div>
+  </div>
+</section>
+
+<section class="feature" id="pictures">
+  <div class="wrap">
+    <div class="text reveal">
+      <div class="kicker">Pictures</div>
+      <h2>Photos that burn the way they look.</h2>
+      <p>Pictures are resampled to your line interval before dithering, so the dots land exactly where the laser fires, and
+        the canvas shows you precisely what will burn.</p>
+      <ul class="ticks">
+        <li>Floyd–Steinberg, Jarvis, Stucki, Sierra, Atkinson, halftone and grayscale</li>
+        <li>3D slice depth engraving for fiber and CO2 lasers</li>
+        <li>Trace to vectors, magic wand and lasso, and masking with any shape</li>
+      </ul>
+    </div>
+    <div class="shot reveal"><img src="img/halftone-detail.png" alt="A photo shown as a halftone screen" loading="lazy"></div>
+  </div>
+</section>
+
+<section class="feature flip" id="burn">
+  <div class="wrap">
+    <div class="text reveal">
+      <div class="kicker">Burn</div>
+      <h2>Safe by design. Precise by default.</h2>
+      <p>Every move BurnCraft sends is checked against your real bed first, even after you move the origin. Preview and
+        Frame never fire the laser, and Start is the only button that does.</p>
+      <ul class="ticks">
+        <li>Start from absolute coordinates, a saved origin or the head's position</li>
+        <li>Kerf offset, overscan and tabs that hold parts in the sheet</li>
+        <li>GRBL over USB, K40 M2 Nano boards, EZCad2 galvos and Ruida over the network</li>
+        <li>Animated job preview with time estimates, plus rotary attachments</li>
+      </ul>
+      <div class="chips">
+        <span class="chip hot">.lbrn2</span><span class="chip hot">.burn</span><span class="chip">SVG</span><span class="chip">DXF</span>
+        <span class="chip">PDF</span><span class="chip">PNG</span><span class="chip">G-code</span><span class="chip">.ezd</span><span class="chip">.rd</span><span class="chip">.egv</span>
+      </div>
+    </div>
+    <div class="shot reveal narrow"><img src="img/jobstart-detail.png" alt="The Laser panel: jogging, Start from with a user origin and the job anchor, Frame and Start" loading="lazy"></div>
+  </div>
+</section>
+
+<section class="feature" id="calibrate">
+  <div class="wrap">
+    <div class="text reveal">
+      <div class="kicker">Calibrate</div>
+      <h2>Find the perfect settings, then keep them.</h2>
+      <p>Test &amp; Calibrate makes labelled test designs in one click. Every square burns at its own settings. When you find the one
+        you love, save it as a material and apply it to any layer.</p>
+      <ul class="ticks">
+        <li>Power × speed grids, cut-through ladders, line interval, focus ramp</li>
+        <li>Kerf and fit with a calculator, colour on metal for MOPA fiber, fine detail</li>
+        <li>A material library you can export and share</li>
+      </ul>
+    </div>
+    <div class="trio">
+      <div class="shot reveal"><img src="img/test.png" alt="The Test and Calibrate window" loading="lazy"></div>
+      <div class="stack">
+        <div class="shot reveal"><img src="img/testgrid-detail.png" alt="A power and speed test grid" loading="lazy"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="colony" id="colony">
+  <div class="wrap">
+    <div class="head reveal">
+      <div class="kicker">Burn Colony</div>
+      <h2>Collect what works. 🐜</h2>
+      <p>Turn your best settings into collectible tiles, each with the ant mark, a serial number and a sample. The QR code holds the
+        settings themselves: scan it with any phone, no website needed. And the <b>BurnAnt</b> is BurnCraft's standard benchmark,
+        like a Benchy for lasers.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile reveal"><div class="face"><img src="img/tile-burn.png" alt="A Burn Colony card tile" loading="lazy"></div>
+        <h3>Colony card</h3><p>80 × 50 mm, with the material, laser, settings and date.</p></div>
+      <div class="tile reveal"><div class="face"><img src="img/burnant-burn.png" alt="The BurnAnt benchmark card" loading="lazy"></div>
+        <h3>BurnAnt benchmark</h3><p>Gradient, dithered ant, fine text, holes and a drop-out washer.</p></div>
+      <div class="tile reveal"><div class="face"><img src="img/coin-burn.png" alt="A Burn Colony coin" loading="lazy"></div>
+        <h3>Colony coin</h3><p>60 mm, for the keyring, the shelf or trading with friends.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="feature flip">
+  <div class="wrap">
+    <div class="text reveal">
+      <div class="kicker">Make things</div>
+      <h2>From idea to parts in seconds.</h2>
+      <p>Generate a finger-joint box from its size and material thickness, with the kerf already allowed for. Or make a living
+        hinge, a gear with real involute teeth, or a jigsaw puzzle over your photo.</p>
+    </div>
+    <div class="wood reveal"><img src="img/generators-burn.png" alt="A generated box, gear, living hinge and puzzle" loading="lazy"></div>
+  </div>
+</section>
+
+<section class="download" id="download">
+  <div class="wrap">
+    <div class="head reveal">
+      <div class="kicker">Download</div>
+      <h2>Free for everyone, everywhere.</h2>
+    </div>
+    <div class="osgrid">
+      <a class="os web reveal" href="https://amruthwo.github.io/BurnCraft/"><b>Browser</b><span>Nothing to install: open, design and export</span></a>
+      <a class="os reveal" href="https://github.com/amruthwo/BurnCraft/releases/latest"><b>Windows</b><span>Installer or portable · x86_64 &amp; ARM</span></a>
+      <a class="os reveal" href="https://github.com/amruthwo/BurnCraft/releases/latest"><b>macOS</b><span>Universal · Apple Silicon &amp; Intel</span></a>
+      <a class="os reveal" href="https://github.com/amruthwo/BurnCraft/releases/latest"><b>Linux</b><span>.deb · .rpm · Flatpak · portable</span></a>
+      <a class="os reveal" href="https://github.com/amruthwo/BurnCraft/releases/latest"><b>FreeBSD</b><span>Portable · x86_64 &amp; ARM</span></a>
+    </div>
+    <div class="honest reveal">
+      <b>Honest note:</b> BurnCraft is a rough-around-the-edges hobby project, built with AI help and lots of testing, and you should
+      expect bugs. If you need mature software for your laser and can afford it, <a href="https://lightburnsoftware.com/">LightBurn</a>
+      is excellent. <b>Laser safety:</b> never leave a running laser unattended, wear the right eye protection, and Frame every new
+      job at low power first.
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>© BurnCraft contributors · Free software under the <a href="https://github.com/amruthwo/BurnCraft/blob/main/LICENSE">GNU GPL v3 or later</a></div>
+    <div><a href="https://github.com/amruthwo/BurnCraft">GitHub</a> · <a href="https://github.com/amruthwo/BurnCraft/releases">Releases</a> · <a href="https://github.com/amruthwo/BurnCraft/issues">Report a bug</a></div>
+    <div style="flex-basis:100%">BurnCraft isn't affiliated with LightBurn Software, ArtCraft or Craft Anything. "LightBurn" is a trademark of its owner, used only to describe file compatibility.</div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // reveal sections (and sweep the laser across screenshots) as they scroll into view
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (e.isIntersecting) { e.target.classList.add("seen"); io.unobserve(e.target); }
+  }), { threshold: 0.18 });
+  document.querySelectorAll(".reveal, .shot").forEach((el) => io.observe(el));
+
+  // tiles tilt toward the pointer
+  if (!reduce) document.querySelectorAll(".tile").forEach((t) => {
+    t.addEventListener("pointermove", (ev) => {
+      const r = t.getBoundingClientRect();
+      const x = (ev.clientX - r.left) / r.width - 0.5, y = (ev.clientY - r.top) / r.height - 0.5;
+      t.style.transform = `rotateY(${x * 10}deg) rotateX(${-y * 10}deg) translateY(-4px)`;
+    });
+    t.addEventListener("pointerleave", () => (t.style.transform = ""));
+  });
+
+  // the hero: a laser traces the ant mark into the wood, the burn darkens, then it starts again
+  const trace = document.getElementById("trace"), scorch = document.getElementById("scorch");
+  const laser = document.getElementById("laser"), halo = document.getElementById("halo");
+  const board = document.querySelector(".board");
+  const len = trace.getTotalLength();
+  trace.style.strokeDasharray = len;
+  if (reduce) { trace.style.strokeDashoffset = 0; scorch.style.opacity = 0.92; return; }
+  const [tx, ty] = (trace.parentNode.getAttribute("transform").match(/-?[\d.]+/g) || [0, 0]).map(Number);
+  const TRACE = 9000, FILL = 1400, HOLD = 2600, FADE = 900;
+  let start = performance.now(), lastSmoke = 0;
+  function puff(x, y) {
+    const svg = trace.ownerSVGElement, box = svg.getBoundingClientRect(), b = board.getBoundingClientRect();
+    const sx = box.width / 161.368, sy = box.height / 214.021;
+    const s = document.createElement("div");
+    s.className = "smoke";
+    s.style.left = (box.left - b.left + x * sx - 7) + "px";
+    s.style.top = (box.top - b.top + y * sy - 7) + "px";
+    board.appendChild(s);
+    s.animate([{ transform: "translate(0,0) scale(.6)", opacity: .55 }, { transform: `translate(${(Math.random() - .5) * 30}px,-60px) scale(2.2)`, opacity: 0 }],
+      { duration: 1600, easing: "ease-out" }).onfinish = () => s.remove();
+  }
+  function frame(now) {
+    const t = now - start;
+    if (t < TRACE) {
+      const k = t / TRACE, at = len * k;
+      trace.style.strokeDashoffset = len - at;
+      const p = trace.getPointAtLength(at);
+      const x = p.x + tx, y = p.y + ty;
+      for (const c of [laser, halo]) { c.setAttribute("cx", x); c.setAttribute("cy", y); }
+      laser.setAttribute("opacity", 1);
+      halo.setAttribute("opacity", 0.7 + Math.random() * 0.3);
+      scorch.style.opacity = 0.12 * k;
+      if (now - lastSmoke > 90) { puff(x, y); lastSmoke = now; }
+    } else if (t < TRACE + FILL) {
+      // the fill pass darkens the whole mark
+      const k = (t - TRACE) / FILL;
+      laser.setAttribute("opacity", 0); halo.setAttribute("opacity", 0);
+      trace.style.strokeDashoffset = 0;
+      scorch.style.opacity = 0.12 + 0.8 * k;
+    } else if (t < TRACE + FILL + HOLD) {
+      scorch.style.opacity = 0.92;
+    } else if (t < TRACE + FILL + HOLD + FADE) {
+      const k = (t - TRACE - FILL - HOLD) / FADE;
+      scorch.style.opacity = 0.92 * (1 - k);
+      trace.style.opacity = 1 - k;
+    } else {
+      trace.style.opacity = 1; trace.style.strokeDashoffset = len; start = now;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
